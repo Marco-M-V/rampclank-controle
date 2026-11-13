@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#11151c">
+<title>RampClank - Controle</title>
+<style>
+:root{
+  --bg:#11151c;--card:#1a2029;--borda:#2a3340;--txt:#e8edf3;--sub:#8a96a6;
+  --ac:#f2a93b;--ok:#3ecf8e;--ruim:#ef5b5b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  user-select:none;-webkit-user-select:none;touch-action:none;overscroll-behavior:none}
+.app{display:flex;flex-direction:column;min-height:100%;padding:14px;gap:12px;max-width:560px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font-size:20px;margin:0;letter-spacing:.5px}
+h1 span{color:var(--ac)}
+.status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub)}
+.led{width:10px;height:10px;border-radius:50%;background:var(--ruim);box-shadow:0 0 8px var(--ruim)}
+.led.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.led.wait{background:var(--ac);box-shadow:0 0 8px var(--ac)}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+.btnCon{width:100%;padding:14px;border-radius:12px;background:var(--ac);color:#1b1305;font-weight:700;font-size:16px}
+.btnCon.desc{background:var(--card);color:var(--txt);border:1px solid var(--borda)}
+.aviso{background:#3a2020;border:1px solid #6b3030;border-radius:12px;padding:12px;font-size:14px;line-height:1.4;display:none}
+.abas{display:flex;background:var(--card);border-radius:12px;padding:4px;border:1px solid var(--borda)}
+.abas button{flex:1;padding:10px;border-radius:9px;background:transparent;color:var(--sub);font-weight:600}
+.abas button.sel{background:var(--borda);color:var(--txt)}
+.area{flex:1;display:flex;align-items:center;justify-content:center;min-height:330px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(92vw,360px);aspect-ratio:1}
+.pad button{background:var(--card);border:1px solid var(--borda);border-radius:16px;font-size:34px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform .05s}
+.pad button small{font-size:11px;color:var(--sub);margin-top:2px;font-weight:600}
+.pad button.ativo{background:var(--ac);color:#1b1305;transform:scale(.96)}
+.pad button.ativo small{color:#3d2a08}
+.pad button.stop{background:#2a1c1c;border-color:#5a2a2a;color:var(--ruim);font-size:15px;font-weight:800}
+.pad button.stop.ativo{background:var(--ruim);color:#fff}
+.joy{position:relative;width:min(88vw,320px);aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,#1f2631 0%,#171c24 70%);border:2px solid var(--borda);display:none}
+.joy::before,.joy::after{content:"";position:absolute;background:var(--borda);opacity:.5}
+.joy::before{left:50%;top:8%;bottom:8%;width:1px}
+.joy::after{top:50%;left:8%;right:8%;height:1px}
+.knob{position:absolute;left:50%;top:50%;width:34%;aspect-ratio:1;border-radius:50%;
+  background:var(--ac);transform:translate(-50%,-50%);box-shadow:0 6px 18px rgba(0,0,0,.5);z-index:2}
+.knob.solto{transition:left .12s,top .12s}
+.rodape{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);gap:10px;flex-wrap:wrap}
+.cmd{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--txt);font-size:15px}
+.log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--sub);background:var(--card);
+  border:1px solid var(--borda);border-radius:10px;padding:8px;height:64px;overflow:hidden;white-space:pre-line}
+.dica{font-size:12px;color:var(--sub);text-align:center}
+@media (orientation:landscape) and (max-height:520px){
+  .app{max-width:none;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto 1fr;align-items:start}
+  header,.btnCon,.aviso,.abas,.rodape,.log,.dica{grid-column:1}
+  .area{grid-column:2;grid-row:1/span 6;min-height:0;height:100%}
+  .pad{width:min(44vw,82vh)}
+  .joy{width:min(42vw,80vh)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Ramp<span>Clank</span></h1>
+    <div class="status"><div class="led" id="led"></div><span id="txtStatus">desconectado</span></div>
+  </header>
+
+  <div class="aviso" id="aviso"></div>
+
+  <button class="btnCon" id="btnCon">Conectar no robô</button>
+
+  <div class="abas">
+    <button id="abaPad" class="sel">Botões</button>
+    <button id="abaJoy">Joystick</button>
+  </div>
+
+  <div class="area">
+    <div class="pad" id="pad">
+      <button data-c="q">↖<small>Q</small></button>
+      <button data-c="w">↑<small>W</small></button>
+      <button data-c="e">↗<small>E</small></button>
+      <button data-c="a">↺<small>A</small></button>
+      <button data-c="p" class="stop">PARAR<small>P</small></button>
+      <button data-c="d">↻<small>D</small></button>
+      <button data-c="z">↙<small>Z</small></button>
+      <button data-c="s">↓<small>S</small></button>
+      <button data-c="c">↘<small>C</small></button>
+    </div>
+    <div class="joy" id="joy"><div class="knob solto" id="knob"></div></div>
+  </div>
+
+  <div class="rodape">
+    <span>Comando: <b class="cmd" id="cmdAtual">P</b></span>
+    <span>ESP32: <b class="cmd" id="eco">-</b></span>
+  </div>
+  <div class="log" id="log"></div>
+  <div class="dica">Segure pra andar, soltou parou. No PC: W A S D, Q E Z C, espaço para.</div>
+</div>
+
+<script>
+const SERV = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+const RX   = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
+const TX   = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
+const INTERVALO = 120
+
+let disp = null, chRx = null, conectado = false
+let cmd = 'p'
+let pendente = null, ocupado = false
+let wakeLock = null
+const enc = new TextEncoder(), dec = new TextDecoder()
+
+const $ = id => document.getElementById(id)
+const linhas = []
+function log(t){
+  linhas.push(t)
+  if(linhas.length>4) linhas.shift()
+  $('log').textContent = linhas.join('\n')
+}
+
+function setStatus(tipo, txt){
+  $('led').className = 'led' + (tipo==='on'?' on':tipo==='wait'?' wait':'')
+  $('txtStatus').textContent = txt
+  const b = $('btnCon')
+  b.textContent = tipo==='on' ? 'Desconectar' : 'Conectar no robô'
+  b.classList.toggle('desc', tipo==='on')
+}
+
+if(!navigator.bluetooth){
+  const a = $('aviso')
+  a.style.display='block'
+  a.innerHTML = 'Esse navegador não tem Bluetooth web. Use o <b>Chrome no Android</b> ou o Chrome/Edge no PC. ' +
+    'No iPhone, abra a página no app <b>Bluefy</b>. A página também precisa estar em <b>https</b>.'
+  $('btnCon').disabled = true
+  $('btnCon').style.opacity = .4
+}
+
+async function conectar(){
+  try{
+    setStatus('wait','procurando...')
+    disp = await navigator.bluetooth.requestDevice({
+      filters:[{namePrefix:'RampClank'},{services:[SERV]}],
+      optionalServices:[SERV]
+    })
+    disp.addEventListener('gattserverdisconnected', aoDesconectar)
+    await ligarGatt()
+  }catch(e){
+    setStatus('off','desconectado')
+    if(e.name!=='NotFoundError') log('erro: '+e.message)
+  }
+}
+
+async function ligarGatt(){
+  setStatus('wait','conectando...')
+  const srv = await disp.gatt.connect()
+  const s = await srv.getPrimaryService(SERV)
+  chRx = await s.getCharacteristic(RX)
+  try{
+    const chTx = await s.getCharacteristic(TX)
+    await chTx.startNotifications()
+    chTx.addEventListener('characteristicvaluechanged', ev=>{
+      const msg = dec.decode(ev.target.value)
+      $('eco').textContent = msg
+      if(msg==='timeout') log('ESP parou por falta de sinal')
+    })
+  }catch(e){ log('sem retorno do ESP (ok)') }
+  conectado = true
+  setStatus('on', disp.name || 'conectado')
+  log('conectado em '+(disp.name||'robô'))
+  segurarTela()
+  enviar('p')
+}
+
+function aoDesconectar(){
+  conectado = false
+  chRx = null
+  setStatus('off','desconectado')
+  log('conexão caiu')
+  soltarTudo()
+}
+
+function desconectar(){
+  if(disp && disp.gatt.connected){
+    enviar('p')
+    setTimeout(()=>disp.gatt.disconnect(), 80)
+  }
+}
+
+$('btnCon').onclick = () => conectado ? desconectar() : conectar()
+
+function enviar(c){
+  if(!conectado || !chRx) return
+  pendente = c
+  if(!ocupado) esvaziar()
+}
+
+async function esvaziar(){
+  ocupado = true
+  while(pendente){
+    const c = pendente
+    pendente = null
+    try{
+      if(chRx.writeValueWithoutResponse) await chRx.writeValueWithoutResponse(enc.encode(c))
+      else await chRx.writeValue(enc.encode(c))
+    }catch(e){}
+  }
+  ocupado = false
+}
+
+function setCmd(c){
+  if(c===cmd) return
+  cmd = c
+  $('cmdAtual').textContent = c.toUpperCase()
+  document.querySelectorAll('.pad button').forEach(b=>b.classList.toggle('ativo', b.dataset.c===c && c!=='p'))
+  if(c!=='p' && navigator.vibrate) try{navigator.vibrate(12)}catch(e){}
+  enviar(c)
+}
+
+setInterval(()=>{ if(conectado) enviar(cmd) }, INTERVALO)
+
+const apertados = new Map()
+document.querySelectorAll('.pad button').forEach(b=>{
+  b.addEventListener('pointerdown', ev=>{
+    ev.preventDefault()
+    b.setPointerCapture(ev.pointerId)
+    apertados.set(ev.pointerId, b.dataset.c)
+    setCmd(b.dataset.c)
+  })
+  const solta = ev=>{
+    if(!apertados.has(ev.pointerId)) return
+    apertados.delete(ev.pointerId)
+    const resto = [...apertados.values()]
+    setCmd(resto.length ? resto[resto.length-1] : 'p')
+  }
+  b.addEventListener('pointerup', solta)
+  b.addEventListener('pointercancel', solta)
+  b.addEventListener('lostpointercapture', solta)
+  b.addEventListener('contextmenu', e=>e.preventDefault())
+})
+
+const joy = $('joy'), knob = $('knob')
+let joyId = null
+const SETORES = ['d','e','w','q','a','z','s','c']
+const MAPA_JOY = {d:'d',e:'e',w:'w',q:'q',a:'a',z:'z',s:'s',c:'c'}
+
+function joyMove(ev){
+  const r = joy.getBoundingClientRect()
+  const raio = r.width/2
+  let dx = ev.clientX - (r.left+raio)
+  let dy = ev.clientY - (r.top+raio)
+  const dist = Math.hypot(dx,dy)
+  const lim = raio*0.66
+  if(dist>lim){ dx = dx/dist*lim; dy = dy/dist*lim }
+  knob.style.left = (50 + dx/r.width*100)+'%'
+  knob.style.top = (50 + dy/r.height*100)+'%'
+  if(dist < raio*0.22){ setCmd('p'); return }
+  let ang = Math.atan2(-dy, dx)*180/Math.PI
+  if(ang<0) ang+=360
+  const idx = Math.round(ang/45)%8
+  setCmd(MAPA_JOY[SETORES[idx]])
+}
+
+joy.addEventListener('pointerdown', ev=>{
+  ev.preventDefault()
+  joyId = ev.pointerId
+  joy.setPointerCapture(ev.pointerId)
+  knob.classList.remove('solto')
+  joyMove(ev)
+})
+joy.addEventListener('pointermove', ev=>{ if(ev.pointerId===joyId) joyMove(ev) })
+const joySolta = ev=>{
+  if(ev.pointerId!==joyId) return
+  joyId = null
+  knob.classList.add('solto')
+  knob.style.left='50%'; knob.style.top='50%'
+  setCmd('p')
+}
+joy.addEventListener('pointerup', joySolta)
+joy.addEventListener('pointercancel', joySolta)
+joy.addEventListener('lostpointercapture', joySolta)
+
+function aba(qual){
+  const pad = qual==='pad'
+  $('pad').style.display = pad ? 'grid' : 'none'
+  joy.style.display = pad ? 'none' : 'block'
+  $('abaPad').classList.toggle('sel', pad)
+  $('abaJoy').classList.toggle('sel', !pad)
+  soltarTudo()
+  try{ localStorage.setItem('rc_aba', qual) }catch(e){}
+}
+$('abaPad').onclick = ()=>aba('pad')
+$('abaJoy').onclick = ()=>aba('joy')
+try{ if(localStorage.getItem('rc_aba')==='joy') aba('joy') }catch(e){}
+
+const TECLAS = {w:'w',a:'a',s:'s',d:'d',q:'q',e:'e',z:'z',c:'c',arrowup:'w',arrowdown:'s',arrowleft:'a',arrowright:'d'}
+const teclasDown = []
+document.addEventListener('keydown', ev=>{
+  const k = ev.key.toLowerCase()
+  if(k===' ' || k==='p'){ ev.preventDefault(); teclasDown.length=0; setCmd('p'); return }
+  const c = TECLAS[k]
+  if(!c) return
+  ev.preventDefault()
+  if(ev.repeat) return
+  if(!teclasDown.includes(c)) teclasDown.push(c)
+  setCmd(c)
+})
+document.addEventListener('keyup', ev=>{
+  const c = TECLAS[ev.key.toLowerCase()]
+  if(!c) return
+  const i = teclasDown.indexOf(c)
+  if(i>=0) teclasDown.splice(i,1)
+  setCmd(teclasDown.length ? teclasDown[teclasDown.length-1] : 'p')
+})
+
+function soltarTudo(){
+  apertados.clear()
+  teclasDown.length = 0
+  joyId = null
+  knob.classList.add('solto')
+  knob.style.left='50%'; knob.style.top='50%'
+  setCmd('p')
+}
+window.addEventListener('blur', soltarTudo)
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) soltarTudo()
+  else if(conectado) segurarTela()
+})
+
+async function segurarTela(){
+  try{ if('wakeLock' in navigator && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>wakeLock=null) } }catch(e){}
+}
+</script>
+</body>
+</html>
